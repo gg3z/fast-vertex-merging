@@ -53,3 +53,4 @@ TBD:
 - random locations should be generated more "randomly"
 - there is a bug in the merging of vertices (the final number of vertices should always be 8)
 - performance can likely be improved
+- testing needs to be broader and also more granular, as well as more formal (googletest or catch2)
