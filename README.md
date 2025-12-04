@@ -14,17 +14,31 @@ Rationale: repeated vertices are a common occurence in scanned meshes, and espec
 
 Example 1: a simple 2D mesh with repeated vertex locations, so that the simplified mesh can be validated visually.
 
-After launching:
+After launching  './build/polyclean mesh_ex1.dat'
 
 
-'./build/polyclean mesh_ex1.dat'
+the result should be  'merged_mesh_ex1.dat'
 
 
-the result should be:
+Example 2: a study of the execution time to merge increasingly large meshes. These meshes are randomly generated and contain vertex clusters with a predefined diameter d. The grid hashing algorithm reduces each cluster to one vertex.
+The code in this repository produces the following output (times are in microseconds)
 
+Vertices merged from 16 to 8 ; Time to merge = 105 us
+Vertices merged from 32 to 8 ; Time to merge = 179 us
+Vertices merged from 64 to 8 ; Time to merge = 326 us
+Vertices merged from 128 to 8 ; Time to merge = 515 us
+Vertices merged from 256 to 9 ; Time to merge = 3598 us
+Vertices merged from 576 to 9 ; Time to merge = 2277 us
+Vertices merged from 1152 to 9 ; Time to merge = 4684 us
+Vertices merged from 2304 to 10 ; Time to merge = 9562 us
+Vertices merged from 5120 to 14 ; Time to merge = 21720 us
+Vertices merged from 14336 to 14 ; Time to merge = 68710 us
+Vertices merged from 28672 to 12 ; Time to merge = 156295 us
+Vertices merged from 49152 to 12 ; Time to merge = 243646 us
 
-'merged_mesh_ex1.dat'
+The relationship between initial vertices and execution time is almost linear, as expected.
 
-
-Example 2: (in progress) a large randomly generated 3D mesh containing vertex clusters with a predefined diameter d.
-            When this mesh is simplified using a tolerance slghtly larger than the diameter d, each cluster will be reduced to one vertex.
+TBD:
+- random locations should be generated more "randomly"
+- there is a bug in the merging of vertices (the final number of vertices should always be 8)
+- performance can likely be improved

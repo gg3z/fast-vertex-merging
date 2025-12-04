@@ -58,8 +58,14 @@ struct Mesh {
     int read(const string& filename);
     int readSTL(const string& filename);
     bool write(const string& filename) const;
-    int mergeDupVerts(double tol = 1.e-10);
+    int mergeDupVerts(double tol = 1.e-10, bool round = false);
+    void randomizeVertices(uint32_t numPerVtx, double half_len = 0.001);
+private:
+    void roundValues(int digits = 0);
 };
 
 
 int consolidate(vector<Vertex>&, double tol, vector<uint32_t> &old_to_new);
+vector<array<double,3>> uniform_gen(uint64_t numSamples, const array<double,3> &ctr, double half_side);
+bool test_merge(string fname);
+bool test_randomize(string fname);

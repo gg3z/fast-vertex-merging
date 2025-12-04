@@ -8,10 +8,41 @@
 #include <sstream>
 #include <unordered_set>
 #include <unordered_map>
+#include <random>
+#include <numbers>
+#include <cmath>
+#include <chrono>
 
 using namespace std;
 
 #define DEBUG 0
+
+
+vector<array<double,3>> uniform_gen(uint64_t numSamples, const array<double,3> &ctr, double half_side)
+{
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<double> disx(ctr[0] - half_side, ctr[0] + half_side);
+    uniform_real_distribution<double> disy(ctr[1] - half_side, ctr[1] + half_side);
+    uniform_real_distribution<double> disz(ctr[2] - half_side, ctr[2] + half_side);
+    vector<array<double,3>> vs;
+    for( int k = 0; k < numSamples; ++k )
+        vs.push_back({disx(gen), disy(gen), disz(gen)});
+    return vs;
+}
+
+void Mesh::roundValues(int digits)
+{
+    for( auto &v : V )
+    {
+        for( int k = 0; k < 3; ++k )
+        {
+            v.p[k] = round(v.p[k]);
+            if( abs(v.p[k]) < 1.*pow(10, -digits) )
+                v.p[k] = 0.;
+        }
+    }
+}
 
 int Mesh::read(const string& filename)
 {
@@ -88,10 +119,11 @@ bool Mesh::write(const string& filename) const
     {
         fout << f.v[0] << " " << f.v[1] << " " << f.v[2] << "\n";
     }
+    fout << "\n";
     return true;
 }
 
-int Mesh::mergeDupVerts(double tol)
+int Mesh::mergeDupVerts(double tol, bool round)
 {
     vector<uint32_t> o2n;
     int nNewInds = consolidate(V, tol, o2n);
@@ -106,6 +138,8 @@ int Mesh::mergeDupVerts(double tol)
         cout << iv++ << " --> " << n << endl;
     }
 #endif
+    if( round )
+        roundValues();
     // update face indices
     for( auto &f : F )
     {
@@ -114,6 +148,22 @@ int Mesh::mergeDupVerts(double tol)
         f.v[2] = o2n[f.v[2]];
     }
     return nNewInds;
+}
+
+void Mesh::randomizeVertices(uint32_t nPerVtx, double half_len)
+{
+    vector<Vertex> RV;
+    for( const auto &v : V )
+    {
+        auto rand_pos = uniform_gen(nPerVtx, v.p, half_len);
+        Vertex rv;
+        for( const auto &p : rand_pos )
+        {
+            rv.p = p;
+            RV.emplace_back(rv);
+        }
+    }
+    V.swap(RV);
 }
 
 int consolidate(vector<Vertex>& V, double eps, vector<uint32_t>& old2new)
@@ -148,4 +198,57 @@ int consolidate(vector<Vertex>& V, double eps, vector<uint32_t>& old2new)
     }
     V.swap(NV);
     return newCount;
+}
+
+bool test_merge(string fname)
+{
+    Mesh mesh;
+    if( mesh.read(fname) > 0 )
+    {
+#if DEBUG
+        cout << "file not found\n";
+#endif
+        return false;
+    }
+    string vmerged("merged_");
+    vmerged += fname;
+    int nV = mesh.V.size();
+    const auto start = std::chrono::steady_clock::now();
+    mesh.mergeDupVerts();
+    const auto end = std::chrono::steady_clock::now();
+    chrono::milliseconds merge_time = chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    cout << "Vertices merged from " << nV << " to " << mesh.V.size()  << " ; Time to merge = " << merge_time << " ms" << endl;
+
+    mesh.write(vmerged);
+    return true;
+}
+
+bool test_randomize(string fname)
+{
+    Mesh mesh;
+    if( mesh.read(fname) > 0 )
+    {
+#if DEBUG
+        cout << "file not found\n";
+#endif
+        return false;
+    }
+    for( int nR = 2; nR <= 4096; nR *= 2 )
+    {
+        mesh.randomizeVertices(nR, 0.2);
+        string randomized("random_");
+        randomized += to_string(nR);
+        randomized += fname;
+        mesh.write(randomized);
+        int nV = mesh.V.size();
+        const auto start = std::chrono::steady_clock::now();
+        mesh.mergeDupVerts(0.5, true);
+        const auto end = std::chrono::steady_clock::now();
+        chrono::microseconds merge_time = chrono::duration_cast<std::chrono::microseconds>(end - start);
+        cout << "Vertices merged from " << nV << " to " << mesh.V.size()  << " ; Time to merge = " << merge_time << endl;
+        string merged("merged_");
+        merged += randomized;
+        mesh.write(merged);
+    }
+    return true; 
 }
